@@ -3,8 +3,9 @@
                         "data/ALLFLOWMETER_HIKARI2021.csv", 
                         "data/ALLFLOWMETER_HIKARI2022.csv"
                     ],
-    "out_file_path" : "data/sampled/preprocessed.pkl",
+    "out_file_path" : "data/graphs/graphs.pkl",
     "num_of_samples" : 500,
+    "real_data_alpha" : 0.5,
     "num_of_hops" : 5,
     "features": ["flow_duration",
     "fwd_pkts_tot", "bwd_pkts_tot", "fwd_data_pkts_tot",
