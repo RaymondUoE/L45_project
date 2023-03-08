@@ -148,7 +148,7 @@ class MPNNLayer(MessagePassing):
 
 
 class MPNNModel(Module):
-    def __init__(self, num_layers=4, emb_dim=64, in_dim=11, edge_dim=4, out_dim=1):
+    def __init__(self, num_layers=4, emb_dim=64, in_dim=11, edge_dim=4, graph_out_dim=1, node_out_dim=5):
         """Message Passing Neural Network model for graph property prediction
 
         Args:
@@ -159,7 +159,6 @@ class MPNNModel(Module):
             out_dim: (int) - output dimension (fixed to 1)
         """
         super().__init__()
-        
         # Linear projection for initial node features
         # dim: d_n -> d
         self.lin_in = Linear(in_dim, emb_dim)
@@ -175,7 +174,8 @@ class MPNNModel(Module):
 
         # Linear prediction head
         # dim: d -> out_dim
-        self.lin_pred = Linear(emb_dim, out_dim)
+        self.graph_lin_pred = Linear(emb_dim, graph_out_dim)
+        self.node_lin_pred = Linear(emb_dim, node_out_dim)
         
     def forward(self, data):
         """
@@ -193,6 +193,7 @@ class MPNNModel(Module):
 
         h_graph = self.pool(h, data.batch) # (n, d) -> (batch_size, d)
 
-        out = self.lin_pred(h_graph) # (batch_size, d) -> (batch_size, 1)
+        graph_out = self.graph_lin_pred(h_graph) # (batch_size, d) -> (batch_size, 1)
+        node_out = self.node_lin_pred(h)
 
-        return out
+        return graph_out, node_out

@@ -11,15 +11,21 @@ from mpnn import *
 
 
 class GraphMPNN(pl.LightningModule):
-    def __init__(self, emb_dim, in_dim, edge_dim, out_dim, load=False, load_path=None):
+    def __init__(self, emb_dim, in_dim, edge_dim, graph_out_dim=1, node_out_dim=5, mode='Graph', load=False, load_path=None):
         super().__init__()
-        self.model = MPNNModel(num_layers=4, emb_dim=64, in_dim=in_dim, edge_dim=edge_dim, out_dim=out_dim)
+        self.mode = mode
+        self.model = MPNNModel(num_layers=4, emb_dim=emb_dim, in_dim=in_dim, edge_dim=edge_dim, graph_out_dim=graph_out_dim, node_out_dim=node_out_dim)
         if load:
             self.model.load_state_dict(torch.load(load_path))
         
     def forward(self, batch):
-        y = batch.graph_y
-        pred = self.model(batch)
+        graph_pred, node_pred= self.model(batch)
+        if self.mode == 'Graph':
+            y = batch.graph_y
+            pred = graph_pred
+        elif self.mode == 'Node':
+            y = batch.y.squeeze(1)
+            pred = node_pred
         #print(y.shape)
         #print(pred.shape)
 
@@ -44,8 +50,8 @@ class GraphMPNN(pl.LightningModule):
         optimizer = optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
     
-def trainGNN(train_dataloader, val_dataloader, epochs, batch_size, emb_dim, in_dim, edge_dim, out_dim, load=False, load_path=None):
-    model = GraphMPNN(emb_dim, in_dim, edge_dim, out_dim, load=False, load_path=None)
+def trainMPNN(train_dataloader, val_dataloader, epochs, batch_size, emb_dim, in_dim, edge_dim, graph_out_dim=1, node_out_dim=5, mode='Graph', load=False, load_path=None):
+    model = GraphMPNN(emb_dim, in_dim, edge_dim, graph_out_dim=graph_out_dim, node_out_dim=node_out_dim, mode=mode, load=False, load_path=None)
 
     save_path = os.path.join('GraphMPNN_', '_'.join([str('epochs')]))
     trainer = pl.Trainer(limit_train_batches=batch_size, max_epochs=epochs, accelerator="cuda", callbacks=[pl.callbacks.EarlyStopping(monitor='val_loss',min_delta=0.00, patience=5,verbose=False, mode='min')])
@@ -58,7 +64,7 @@ def trainGNN(train_dataloader, val_dataloader, epochs, batch_size, emb_dim, in_d
 
     return model
 
-def Graph_eval(model, test):
+def model_eval(model, test, mode='Graph'):
     total = 0
     correct = 0
     model.eval()
@@ -70,10 +76,19 @@ def Graph_eval(model, test):
         with torch.no_grad():
             _, y_pred = model(data)
             # Mean Absolute Error using std (computed when preparing data)
-            y_pred = torch.argmax(y_pred, -1).item()
-            if y_pred == data.graph_y.item():
-                correct +=1
-            total +=1
+            if mode == 'Graph':
+                y_pred = torch.argmax(y_pred, -1).item()
+                y = data.graph_y
+                if y_pred == data.graph_y.item():
+                    correct +=1
+                total +=1
+            elif mode == 'Node':
+                y_pred = torch.argmax(y_pred, 1)
+                y = data.y
+                for i in range(y_pred.shape[0]):
+                    if y_pred[i].item() == y[i].item():
+                        correct +=1
+                    total +=1
     
     return correct/total
 
@@ -81,10 +96,10 @@ def Graph_eval(model, test):
 if __name__ == '__main__':
     in_dim, edge_dim, trainLoader, validLoader,testLoader = prepare_data('data/graphs/graphs.jsonl')
 
-    model = trainGNN(trainLoader, validLoader, 50, 128, 128, in_dim, edge_dim, 2)
+    model = trainMPNN(trainLoader, validLoader, 50, 128, 128, in_dim, edge_dim, 1, 5, 'Node')
     
     print('TESTING......')
-    acc = Graph_eval(model, testLoader)
+    acc = model_eval(model, testLoader, mode='Node')
     print(acc)
 
 
