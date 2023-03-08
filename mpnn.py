@@ -195,4 +195,4 @@ class MPNNModel(Module):
 
         out = self.lin_pred(h_graph) # (batch_size, d) -> (batch_size, 1)
 
-        return out.view(-1)
+        return out
