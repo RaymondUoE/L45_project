@@ -3,10 +3,10 @@
                         "data/ALLFLOWMETER_HIKARI2021.csv", 
                         "data/ALLFLOWMETER_HIKARI2022.csv"
                     ],
-    "out_file_path" : "data/graphs/graphs.pkl",
+    "out_file_path" : "data/graphs/graphs.jsonl",
     "num_of_samples" : 500,
     "real_data_alpha" : 0.5,
-    "num_of_hops" : 5,
+    "num_of_hops" : 3,
     "features": ["flow_duration",
     "fwd_pkts_tot", "bwd_pkts_tot", "fwd_data_pkts_tot",
     "bwd_data_pkts_tot", "fwd_pkts_per_sec", "bwd_pkts_per_sec",
@@ -32,6 +32,7 @@
     "bwd_bulk_rate", "active.min", "active.max", "active.tot", "active.avg",
     "active.std", "idle.min", "idle.max", "idle.tot", "idle.avg",
     "idle.std", "fwd_init_window_size", "bwd_init_window_size",
-    "fwd_last_window_size", "bwd_last_window_size"],
+    "fwd_last_window_size"
+    ],
     "force_pos_lable_ratio":0.2 
 }
