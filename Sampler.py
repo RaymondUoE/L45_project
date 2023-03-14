@@ -74,11 +74,11 @@ def flow_duration_to_float(flow):
     else:
         return float(flow)
 
-def sample_edge_attributes(num_of_edges, benign_df, malicious_df, pos_ratio, features):
+def sample_edge_attributes(num_of_edges, benign_df, malicious_df, pos_prob, features):
     attributes = []
     for i in range(num_of_edges):
         # sample from malicious
-        if np.random.uniform(0,1) < pos_ratio:
+        if np.random.uniform(0,1) < pos_prob:
             sample = malicious_df.sample(1)
             feature_values = sample[features].to_dict('records')[0]
             # add label
@@ -150,7 +150,12 @@ if __name__ == '__main__':
         sampled_graphs.append(ba_graph)
     
     for graph in tqdm(sampled_graphs, total=len(sampled_graphs)):
-        edge_attrs = sample_edge_attributes(len(graph.edges), benign_df, malicious_df, config['force_pos_lable_ratio'], config['features'])
+        # graph might have positive labels
+        if np.random.uniform(0,1) < config['force_pos_graph_ratio']:
+            edge_attrs = sample_edge_attributes(len(graph.edges), benign_df, malicious_df, config['force_pos_lable_prob'], config['features'])
+        # graph has all negative labels
+        else:
+            edge_attrs = sample_edge_attributes(len(graph.edges), benign_df, malicious_df, 0, config['features'])
         edge_features = {}
         for i, k in enumerate(graph.edges):
             edge_features[k] = edge_attrs[i]
