@@ -4,6 +4,7 @@
                         "data/ALLFLOWMETER_HIKARI2022.csv"
                     ],
     "out_file_path" : "data/graphs/graphs.jsonl",
+    "out_rnn_path" : "data/graphs/rnn_g.json",
     "num_of_samples" : 10000,
     "real_data_alpha" : 0.5,
     "num_of_hops" : 3,
@@ -35,5 +36,6 @@
     "fwd_last_window_size"
     ],
     "force_pos_lable_prob":0.2,
-    "force_pos_graph_ratio":0.5
+    "force_pos_graph_ratio":0.5,
+    "sample_rnn": true
 }

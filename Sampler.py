@@ -92,6 +92,44 @@ def sample_edge_attributes(num_of_edges, benign_df, malicious_df, pos_prob, feat
             attributes.append(feature_values)
     return attributes
 
+def create_dynamic_networks(adj_mat, drop_prob, add_prob, t):
+    if t == 0:
+        return []
+    else:
+        nnode = len(adj_mat)
+        drop_edges = np.floor(np.random.rand(nnode,nnode) / (1-drop_prob))
+        new_adj = ((adj_mat - drop_edges) > 0).astype(int)
+        add_edges = np.floor(np.random.rand(nnode,nnode) / (1-add_prob))
+        new_adj = ((new_adj + add_edges) > 0).astype(int)
+        return [new_adj] + create_dynamic_networks(new_adj, drop_prob, add_prob, t-1)
+
+def assign_clusters(number_of_types, size):
+    return np.random.randint(0, number_of_types, size=size)  
+
+def assign_labels(clusters, attack_combinations):
+    nnode = clusters.shape[1]
+    labels = []
+    for t, cls_t in enumerate(clusters):
+        history = clusters[:t+1, :, :]
+        history = np.transpose(history, axes=(1,2,0))
+        
+        labels_t = np.zeros((nnode, nnode))
+        for atk in attack_combinations:
+            if len(atk) > history.shape[-1]:
+                continue
+            
+            repeated_perm = np.tile(atk, [nnode, nnode]).reshape(nnode, nnode, -1)
+            labels_t += (history[:,:,-len(atk):]==repeated_perm).all(axis=2).astype(int)
+        labels_t[cls_t == -1] = -1
+        labels.append(labels_t)
+    
+    return np.stack(labels)
+
+def store_dict(save_path, ddict):
+    with open(save_path, 'w') as f:
+        json.dump(ddict, f)
+        f.close()
+
 if __name__ == '__main__':
     
     with open('configs/sampler_config.json', 'r') as f:
@@ -99,11 +137,11 @@ if __name__ == '__main__':
         f.close()
     
     IN_FILES = config['in_file_paths']
-    OUT_FILE = config['out_file_path']
     NUM_SAMPLE = config['num_of_samples']
     REAL_ALPHA = config['real_data_alpha']
     NUM_REAL = int(NUM_SAMPLE * REAL_ALPHA)
     NUM_BA = NUM_SAMPLE - NUM_REAL
+    IS_RNN = config['sample_rnn']
     
     dfs = []
     for file in IN_FILES:
@@ -148,19 +186,58 @@ if __name__ == '__main__':
     for i in range(NUM_BA):
         ba_graph = nx.barabasi_albert_graph(20,2)
         sampled_graphs.append(ba_graph)
+        
     
-    for graph in tqdm(sampled_graphs, total=len(sampled_graphs)):
-        # graph might have positive labels
-        if np.random.uniform(0,1) < config['force_pos_graph_ratio']:
-            edge_attrs = sample_edge_attributes(len(graph.edges), benign_df, malicious_df, config['force_pos_lable_prob'], config['features'])
-        # graph has all negative labels
-        else:
-            edge_attrs = sample_edge_attributes(len(graph.edges), benign_df, malicious_df, 0, config['features'])
-        edge_features = {}
-        for i, k in enumerate(graph.edges):
-            edge_features[k] = edge_attrs[i]
-        nx.set_edge_attributes(graph, values=edge_features)
+    if IS_RNN:
+        
+        OUT_FILE = config['out_rnn_path']
+        with open('configs/recurrent_sampler_config.json', 'r') as f:
+            rnn_config =  json.load(f)
+            f.close()
+        
+        graphs_all, clusters_all, labels_all = [], [], []
+        
+        for graph in tqdm(sampled_graphs, total=len(sampled_graphs)):
+            dg = nx.DiGraph()
+            dg.add_edges_from(list(graph.edges))
+            adj_mat = nx.to_numpy_array(dg)
+
+            dynamic_networks = np.stack(create_dynamic_networks(adj_mat, rnn_config['add_edge_prob'], rnn_config['drop_edge_prob'], rnn_config['t']))
+            clusters = []
+            for g_t in dynamic_networks:
+                clusters.append(np.select([g_t == 0, g_t !=0], [-1, assign_clusters(rnn_config['number_of_types'], size=(len(g_t),len(g_t)))]))
+
+            clusters = np.stack(clusters)
+
+            labels = assign_labels(clusters, rnn_config['attack_combinations'])
+            
+            graphs_all.append(dynamic_networks)
+            clusters_all.append(clusters)
+            labels_all.append(labels)
+            
+        out_dict = {}
+        out_dict['graphs'] = [x.tolist() for x in graphs_all]
+        out_dict['clusters'] = [x.tolist() for x in clusters_all]
+        out_dict['labels'] = [x.tolist() for x in labels_all]
+        
+        store_dict(OUT_FILE, out_dict)
+        
+        
+    else:
     
-    store_as_list_of_dicts(OUT_FILE, sampled_graphs)
+        OUT_FILE = config['out_file_path']
+        for graph in tqdm(sampled_graphs, total=len(sampled_graphs)):
+            # graph might have positive labels
+            if np.random.uniform(0,1) < config['force_pos_graph_ratio']:
+                edge_attrs = sample_edge_attributes(len(graph.edges), benign_df, malicious_df, config['force_pos_lable_prob'], config['features'])
+            # graph has all negative labels
+            else:
+                edge_attrs = sample_edge_attributes(len(graph.edges), benign_df, malicious_df, 0, config['features'])
+            edge_features = {}
+            for i, k in enumerate(graph.edges):
+                edge_features[k] = edge_attrs[i]
+            nx.set_edge_attributes(graph, values=edge_features)
+    
+        store_as_list_of_dicts(OUT_FILE, sampled_graphs)
     
 
