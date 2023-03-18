@@ -84,7 +84,7 @@ def update_stats(training_stats, epoch_stats):
     return training_stats
 
 
-def train_eval_loop(model, train_seqs, valid_seqs, test_seqs, mode='Graph'):
+def train_eval_loop(model, train_seqs, valid_seqs, test_seqs, mode='Node'):
     optimiser = optim.Adam(model.parameters(), lr=1e-3)
     training_stats = None
     # Training loop
@@ -104,8 +104,8 @@ def train_eval_loop(model, train_seqs, valid_seqs, test_seqs, mode='Graph'):
     return training_stats
 
 if __name__ == '__main__':
-    trainLoader, validLoader,testLoader = prepare_data('data/graphs/rnn_g.json')
+    trainLoader, validLoader,testLoader = prepare_data('data/graphs/rnn.json')
 
     model =  RMPNNModel(num_layers=4, emb_dim=64, in_dim=1, edge_dim=1, graph_out_dim=2, node_out_dim=2)
     
-    train_stats_mlp_cora = train_eval_loop(model, trainLoader, validLoader, testLoader)
+    train_stats_mlp_cora = train_eval_loop(model, trainLoader, validLoader, testLoader, mode='Node')

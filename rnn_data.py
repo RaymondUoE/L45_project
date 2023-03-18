@@ -49,7 +49,7 @@ def json2graphs(data):
             x = torch.ones((len(data['graphs'][i][t]), 1), dtype=torch.float)
             edge_attr = torch.tensor(edge_attr, dtype=torch.float).reshape((edge_index.shape[1], 1))
 
-            node_labels = torch.tensor(node_labels).reshape(x.shape)
+            node_labels = torch.tensor(node_labels)
             edge_labels = torch.tensor(edge_labels).reshape((edge_attr.shape[0], 1))
             graph_label = torch.tensor(graph_label)
             pyg_graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=node_labels, graph_y=graph_label, edge_y=edge_labels)
