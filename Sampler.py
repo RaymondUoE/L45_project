@@ -155,10 +155,10 @@ if __name__ == '__main__':
     
     data['flow_duration'] = data['flow_duration'].apply(lambda x: flow_duration_to_float(x))
     benign_df = data[data['attack_category']=='Benign']
-    bf_df = data[data['attack_category']=='Bruteforce']
-    bfxml_df = data[data['attack_category']=='Bruteforce-XML']
-    crypto_df = data[data['attack_category']=='XMRIGCC CryptoMiner']
-    malicious_df = data[data['attack_category']!='Benign']
+    # bf_df = data[data['attack_category']=='Bruteforce']
+    # bfxml_df = data[data['attack_category']=='Bruteforce-XML']
+    # crypto_df = data[data['attack_category']=='XMRIGCC CryptoMiner']
+    malicious_df = data[(data['attack_category']!='Benign') & (data['attack_category']!='Background')]
     
     categorial_to_id = {
         'Benign': 0,

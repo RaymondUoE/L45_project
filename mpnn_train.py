@@ -70,6 +70,8 @@ def model_eval(model, test, mode='Graph'):
     model.eval()
     model.to('cuda')
     error = 0
+    fn = 0
+    tp = 0
 
     for data in test:
         data = data.to('cuda')
@@ -81,6 +83,10 @@ def model_eval(model, test, mode='Graph'):
                 y = data.graph_y
                 if y_pred == data.graph_y.item():
                     correct +=1
+                if y_pred == 0 and data.graph_y.item() != 0:
+                    fn += 1
+                if y_pred != 0 and data.graph_y.item() != 0:
+                    tp += 1
                 total +=1
             elif mode == 'Node':
                 y_pred = torch.argmax(y_pred, 1)
@@ -88,18 +94,23 @@ def model_eval(model, test, mode='Graph'):
                 for i in range(y_pred.shape[0]):
                     if y_pred[i].item() == y[i].item():
                         correct +=1
+                    if y_pred[i].item() != 0 and y[i].item() != 0:
+                        tp += 1
+                    if y_pred[i].item() == 0 and y[i].item() != 0:
+                        fn += 1
                     total +=1
     
-    return correct/total
+    return correct/total, (fn / (fn + tp))
 
 
 if __name__ == '__main__':
     in_dim, edge_dim, trainLoader, validLoader,testLoader = prepare_data('data/graphs/graphs.jsonl')
 
-    model = trainMPNN(trainLoader, validLoader, 50, 128, 128, in_dim, edge_dim, 1, 5, 'Node')
+    model = trainMPNN(trainLoader, validLoader, 50, 128, 128, in_dim, edge_dim, 1, 5, 'Graph')
     
     print('TESTING......')
-    acc = model_eval(model, testLoader, mode='Node')
+    acc, fnr = model_eval(model, testLoader, mode='Graph')
     print(acc)
+    print(fnr)
 
 
