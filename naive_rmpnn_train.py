@@ -42,6 +42,8 @@ def model_eval(model, test, mode='Graph'):
     correct = 0
     model.eval()
     error = 0
+    fn = 0
+    tp = 0
 
     for data in test:
         try:
@@ -54,6 +56,10 @@ def model_eval(model, test, mode='Graph'):
                         y = data['graph_ys'][t].item()
                         if y_pred == y:
                             correct +=1
+                        if y_pred == 0 and y != 0:
+                            fn += 1
+                        if y_pred != 0 and y != 0:
+                            tp += 1
                         total +=1
                     elif mode == 'Node':
                         y_pred = torch.argmax(node_preds[t], 1)
@@ -61,11 +67,15 @@ def model_eval(model, test, mode='Graph'):
                         for i in range(y_pred.shape[0]):
                             if y_pred[i].item() == y[i].item():
                                 correct +=1
+                            if y_pred[i].item() != 0 and y[i].item() != 0:
+                                tp += 1
+                            if y_pred[i].item() == 0 and y[i].item() != 0:
+                                fn += 1
                             total +=1
         except:
             error += 1
     print(error)
-    return correct/total
+    return correct/total, (fn / (fn + tp))
 
 def update_stats(training_stats, epoch_stats):
     """ Store metrics along the training
@@ -90,8 +100,8 @@ def train_eval_loop(model, train_seqs, valid_seqs, test_seqs, mode='Node'):
     # Training loop
     for epoch in range(2):
         train_loss = train_rmpnn(train_seqs, model, optimiser, mode=mode)
-        train_acc = model_eval(model, train_seqs, mode=mode)
-        valid_acc = model_eval(model, valid_seqs, mode=mode)
+        train_acc, _ = model_eval(model, train_seqs, mode=mode)
+        valid_acc, _ = model_eval(model, valid_seqs, mode=mode)
         if epoch % 10 == 0:
             print(f"Epoch {epoch} with train loss: {train_loss:.3f} train accuracy: {train_acc:.3f}",
                     f"validation accuracy: {valid_acc:.3f}")
@@ -99,8 +109,9 @@ def train_eval_loop(model, train_seqs, valid_seqs, test_seqs, mode='Node'):
         epoch_stats = {'train_acc': train_acc, 'val_acc': valid_acc, 'epoch':epoch}
         training_stats = update_stats(training_stats, epoch_stats)
     # Lets look at our final test performance
-    test_acc = model_eval(model, test_seqs, mode=mode)
-    print(f"Our final test accuracy for the RMPNN is: {test_acc:.3f}")
+    test_acc, fnr = model_eval(model, test_seqs, mode=mode)
+    print(f"Our final test accuracy for the RMPNN is: {test_acc:.4f}")
+    print(f"Our final test FNR for the RMPNN is: {fnr:.4f}")
     return training_stats
 
 if __name__ == '__main__':
@@ -108,4 +119,4 @@ if __name__ == '__main__':
 
     model =  RMPNNModel(num_layers=4, emb_dim=64, in_dim=1, edge_dim=1, graph_out_dim=2, node_out_dim=2)
     
-    train_stats_mlp_cora = train_eval_loop(model, trainLoader, validLoader, testLoader, mode='Node')
+    train_stats_mlp_cora = train_eval_loop(model, trainLoader, validLoader, testLoader, mode='Graph')
