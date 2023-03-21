@@ -1,4 +1,3 @@
-import argparse
 import pandas as pd
 import numpy as np
 import networkx as nx
@@ -7,11 +6,9 @@ import json
 import random
 import pickle
 
-# IN_FILES = []
-# OUT_FILE = ''
-# NUM_SAMPLE = 0
-
 def sample_graphs(G, sample_space, hop=3, cut_off=20):
+    '''Sample a subgraph from a large graph G'''
+    
     out_graphs = []
     print(f'Sampling {NUM_REAL} real life graphs...')
     for i in range(NUM_REAL):
@@ -36,12 +33,8 @@ def sample_graphs(G, sample_space, hop=3, cut_off=20):
     return out_graphs
 
 def store_as_list_of_dicts(filename, graphs):
-
     list_of_dicts = [nx.to_dict_of_dicts(graph) for graph in graphs]
 
-    # with open(filename, 'wb') as f:
-    #     pickle.dump(list_of_dicts, f)
-    #     f.close()
     with open(filename, 'w') as f:
         for item in list_of_dicts:
             f.write(json.dumps(item) + "\n")
@@ -49,7 +42,6 @@ def store_as_list_of_dicts(filename, graphs):
     return
 
 def load_list_of_dicts(filename, create_using=nx.Graph):
-    
     with open(filename, 'rb') as f:
         list_of_dicts = pickle.load(f)
     
@@ -58,6 +50,7 @@ def load_list_of_dicts(filename, create_using=nx.Graph):
     return graphs
 
 def flow_duration_to_float(flow):
+    '''convert a string valued flow duration feature to float in seconds'''
     # checking if its string
     if 'days' in str(flow):
         days = float(flow.split('days', 1)[0].strip())
@@ -75,6 +68,7 @@ def flow_duration_to_float(flow):
         return float(flow)
 
 def sample_edge_attributes(num_of_edges, benign_df, malicious_df, pos_prob, features):
+    '''sample n edge features from malicious dataframe'''
     attributes = []
     for i in range(num_of_edges):
         # sample from malicious
@@ -93,6 +87,7 @@ def sample_edge_attributes(num_of_edges, benign_df, malicious_df, pos_prob, feat
     return attributes
 
 def create_dynamic_networks(adj_mat, drop_prob, add_prob, t):
+    '''create a series of dynamic networks over time t'''
     if t == 0:
         return []
     else:
@@ -104,9 +99,12 @@ def create_dynamic_networks(adj_mat, drop_prob, add_prob, t):
         return [new_adj] + create_dynamic_networks(new_adj, drop_prob, add_prob, t-1)
 
 def assign_clusters(number_of_types, size):
+    '''assign dummy cluster/traffic type for each edge'''
     return np.random.randint(0, number_of_types, size=size)  
 
 def assign_labels(clusters, attack_combinations):
+    '''assign labels based on config'''
+    
     nnode = clusters.shape[1]
     labels = []
     for t, cls_t in enumerate(clusters):
@@ -138,7 +136,7 @@ if __name__ == '__main__':
     
     IN_FILES = config['in_file_paths']
     NUM_SAMPLE = config['num_of_samples']
-    REAL_ALPHA = config['real_data_alpha']
+    REAL_ALPHA = config['real_data_alpha'] # ratio of subsampled graphs v.s. babarasi graphs
     NUM_REAL = int(NUM_SAMPLE * REAL_ALPHA)
     NUM_BA = NUM_SAMPLE - NUM_REAL
     IS_RNN = config['sample_rnn']
@@ -189,7 +187,6 @@ if __name__ == '__main__':
         
     
     if IS_RNN:
-        
         OUT_FILE = config['out_rnn_path']
         with open('configs/recurrent_sampler_config.json', 'r') as f:
             rnn_config =  json.load(f)
@@ -224,7 +221,6 @@ if __name__ == '__main__':
         
         
     else:
-    
         OUT_FILE = config['out_file_path']
         for graph in tqdm(sampled_graphs, total=len(sampled_graphs)):
             # graph might have positive labels
